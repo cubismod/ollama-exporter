@@ -1,14 +1,28 @@
 # Use a lightweight Python base image
-FROM python:3.11-slim
+FROM python:3.14-slim
+COPY --from=ghcr.io/astral-sh/uv:0.9.11@sha256:5aa820129de0a600924f166aec9cb51613b15b68f1dcd2a02f31a500d2ede568 /uv /uvx /bin/
 
 # Set working directory
 WORKDIR /app
 
-# Copy required files
-COPY ollama_exporter.py .
+ENV UV_LINK_MODE=copy
 
-# Install dependencies
-RUN pip install fastapi uvicorn prometheus_client httpx
+ADD README.md pyproject.toml uv.lock ./
+
+RUN uv venv
+
+# Populate pip and uv caches and resolve wheels (no project install) using BuildKit cache mounts
+# (requires BuildKit/Buildx in CI, which the workflow config already sets up)
+RUN --mount=type=cache,target=/root/.cache/pip \
+	--mount=type=cache,target=/root/.cache/uv \
+	uv sync --link-mode=copy --frozen --no-install-project --no-dev
+
+ADD . .
+
+# Install the project (uses cached wheels from previous step) and verify lockfile
+RUN --mount=type=cache,target=/root/.cache/pip \
+	--mount=type=cache,target=/root/.cache/uv \
+	uv sync --link-mode=copy --no-dev && uv lock --check
 
 # Expose the metrics port
 EXPOSE 8000

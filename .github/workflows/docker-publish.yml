@@ -1,0 +1,72 @@
+name: Docker
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+  security-events: write
+
+env:
+  CACHE_REPO: ghcr.io/cubismod/ollama-exporter/cache
+  REPO: ghcr.io/cubismod/ollama-exporter
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  merge_group:
+
+jobs:
+  build-main:
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: login to ghcr
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+      - name: build and push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REPO }}:${{ github.sha }},${{ env.REPO }}:latest,${{ env.REPO }}:dev-latest
+          cache-from: type=registry,ref=${{ env.CACHE_REPO }}
+          cache-to: type=registry,ref=${{ env.CACHE_REPO }},mode=max
+  pr-check:
+    if: startsWith(github.ref, 'refs/pull/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: login to ghcr
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+      - name: Sanitize branch name
+        id: sanitize
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          SANITIZED=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '_' '-' | tr '[:upper:]' '[:lower:]')
+          echo "branch_tag=$SANITIZED" >> $GITHUB_OUTPUT
+      - name: build and push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REPO }}:${{ github.sha }},${{ env.REPO }}:dev-latest,${{ env.REPO }}:${{ steps.sanitize.outputs.branch_tag }}
+          cache-from: type=registry,ref=${{ env.CACHE_REPO }}
+          cache-to: type=registry,ref=${{ env.CACHE_REPO }},mode=max

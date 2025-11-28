@@ -1,0 +1,12 @@
+[project]
+name = "ollama-exporter"
+version = "0.1.0"
+description = "exporter for ollama"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.122.0",
+    "httpx>=0.28.1",
+    "prometheus-client>=0.23.1",
+    "uvicorn>=0.38.0",
+]
