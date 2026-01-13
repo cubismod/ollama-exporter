@@ -1,5 +1,5 @@
 # Use a lightweight Python base image
-FROM python:3.14-slim@sha256:3955a7dd66ccf92b68d0232f7f86d892eaf75255511dc7e98961bdc990dc6c9b
+FROM python:3.14-slim@sha256:caa9622dab9a2b41c988cda23de8d13d52c328df79d9c341c36ff2e81728a828
 COPY --from=ghcr.io/astral-sh/uv:0.9.24@sha256:816fdce3387ed2142e37d2e56e1b1b97ccc1ea87731ba199dc8a25c04e4997c5 /uv /uvx /bin/
 
 # Set working directory
